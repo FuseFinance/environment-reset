@@ -1,0 +1,24 @@
+{
+  "name": "@fuse/environment-reset",
+  "version": "1.0.0",
+  "description": "Environment reset and database seeding tools for Fuse Platform",
+  "private": true,
+  "scripts": {
+    "reset:local": "bash scripts/reset-environment.sh",
+    "reset:local:simple": "bash scripts/reset-local-simple.sh",
+    "reset:k8s": "bash scripts/reset-and-reseed-all-databases.sh",
+    "reset:workflows": "bash scripts/reset-workflow-repos.sh",
+    "verify:seeds": "bash scripts/verify-seeds.sh",
+    "check:deployment": "bash scripts/check-deployment-status.sh",
+    "help": "echo '\n📦 Fuse Environment Reset Tools\n\n🔧 Available Commands:\n\n  npm run reset:local <client>           - Reset local (with clean repos and npm install)\n  npm run reset:local:simple <client>    - Reset local (fast, uses existing repos in place)\n  npm run reset:k8s <client> <env>       - Reset Kubernetes environment (sandbox/production)\n  npm run reset:workflows <client>       - Reset workflow GitHub repositories\n  npm run verify:seeds <client>          - Verify seeds after reset\n  npm run check:deployment <client>      - Check deployment status\n\n📖 Examples:\n\n  npm run reset:local:simple onb-1       - Recommended for local resets\n  npm run reset:k8s los-demo sandbox\n  npm run reset:workflows qa\n  npm run verify:seeds onb-2\n\n📚 Documentation:\n\n  See docs/ folder for detailed guides:\n  - DATABASE-RESET-GUIDE.md\n  - SAFETY-GUARANTEES.md\n  - ERROR-DETECTION-EXAMPLES.md\n'"
+  },
+  "keywords": [
+    "database",
+    "reset",
+    "seeding",
+    "environment",
+    "devops"
+  ],
+  "author": "Fuse Finance",
+  "license": "UNLICENSED"
+}
