@@ -59,15 +59,25 @@ npm run help
 Reset a local environment by pulling credentials from AWS Secrets Manager and executing commands in local service directories:
 
 ```bash
-npm run reset:local onb-1
+npm run reset:local:simple onb-1
 ```
 
+**⚠️ Important: Before Resetting**
+
+1. **Ensure latest versions are deployed**: Make sure all services have their latest versions deployed to the target environment before running a reset. The reset script will use the code from your local repositories, so ensure your local code matches what's deployed.
+
+2. **Update local repositories**: The reset script automatically:
+   - Checks out `main` branch on each service repository
+   - Pulls latest changes from `origin/main`
+   - Installs/updates dependencies
+   - Generates Prisma clients if needed
+
 This will:
-1. Create temporary clean copies of all service repositories
-2. Checkout main branch and pull latest
-3. Fetch credentials from AWS Secrets Manager
-4. Run migrations and seeds for all services
-5. Clean up temporary directories
+1. Checkout main branch and pull latest changes for each service
+2. Install/update dependencies (npm install)
+3. Generate Prisma clients if needed
+4. Fetch credentials from AWS Secrets Manager
+5. Run migrations and seeds for all services
 
 **Safety**: Only works with `onb-*` clients to prevent accidental production resets.
 
@@ -161,13 +171,16 @@ Most scripts support `--dry-run` to preview changes without execution.
 ### Full Environment Reset (Local)
 
 ```bash
-# 1. Reset all databases
-npm run reset:local onb-1
+# 1. Ensure latest versions are deployed to the environment
+#    (Verify deployments are up-to-date before proceeding)
 
-# 2. Verify seeds
+# 2. Reset all databases (automatically updates local repos to latest)
+npm run reset:local:simple onb-1
+
+# 3. Verify seeds
 npm run verify:seeds onb-1
 
-# 3. Reset workflows (if needed)
+# 4. Reset workflows (if needed)
 npm run reset:workflows onb-1
 ```
 
