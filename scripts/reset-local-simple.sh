@@ -200,22 +200,6 @@ restore_env_file() {
     fi
 }
 
-# Helper function to export environment variables from JSON secret
-export_env_from_secret() {
-    local secret_id=$1
-    local secret_json=$(get_secret "$secret_id")
-    local secret_status=$?
-    
-    if [ $secret_status -ne 0 ]; then
-        return $secret_status
-    fi
-    
-    # Export each key-value pair from JSON, properly escaping values
-    echo "$secret_json" | jq -r 'to_entries | .[] | "export \(.key)=\"\(.value | gsub("\""; "\\\""))\" "' | while IFS= read -r export_line; do
-        eval "$export_line"
-    done
-}
-
 # Helper function to setup service directory (git, npm, prisma)
 setup_service_directory() {
     local service_name=$1

@@ -11,11 +11,14 @@ This project contains all the scripts needed to reset environments to a clean st
 ```
 environment-reset/
 ├── scripts/               # All reset and verification scripts
+│   ├── reset-local-simple.sh             # Local reset (recommended)
 │   ├── reset-environment.sh              # Local reset with clean repos
 │   ├── reset-and-reseed-all-databases.sh # Kubernetes-based reset
 │   ├── reset-workflow-repos.sh           # Reset workflow GitHub repos
 │   ├── verify-seeds.sh                   # Verify seeds after reset
-│   └── check-deployment-status.sh        # Check K8s deployment status
+│   ├── check-deployment-status.sh        # Check K8s deployment status
+│   ├── fix-database-url.sh               # Fix DATABASE_URL issues
+│   └── test-sequence-builder-only.sh     # Test single service reset
 ├── docs/                  # Documentation
 │   ├── DATABASE-RESET-GUIDE.md           # Detailed reset procedures
 │   ├── SAFETY-GUARANTEES.md              # Safety mechanisms
@@ -286,6 +289,33 @@ Re-run the reset and check for errors:
 npm run reset:k8s <client> <environment>
 npm run verify:seeds <client>
 ```
+
+### Failed Migrations (P3009 Error)
+
+If you see an error like:
+```
+Error: P3009
+migrate found failed migrations in the target database
+The `<migration_name>` migration started at <timestamp> failed
+```
+
+This means a previous migration failed and is blocking new migrations. To fix:
+
+```bash
+# 1. Mark the failed migration as rolled back
+cd /path/to/service
+npx prisma migrate resolve --rolled-back "<migration_name>" --schema=./path/to/schema.prisma
+
+# 2. Reset the database schema
+npx prisma migrate reset --force --skip-seed --schema=./path/to/schema.prisma
+
+# 3. Re-run the reset script
+npm run reset:local:simple <client> --service <service-name>
+```
+
+### Special Characters in DATABASE_URL
+
+The reset script handles special characters in DATABASE_URL (e.g., `$`, `!`, `^`, `%`, `>`, `=`) automatically using `printf %q` for safe escaping. If you encounter issues with environment variables not being set correctly, check `/tmp/<service>-output.log` for details.
 
 ## Path Configuration
 
