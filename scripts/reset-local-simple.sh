@@ -695,9 +695,35 @@ reset_workflow_api() {
 
     local success=true
 
+    # TypeORM doesn't have a built-in reset like Prisma, so we need to
+    # drop and recreate the workflow-builder database manually
+    print_info "Dropping and recreating workflow-builder database..."
+    if run_in_dir "workflow-api" "$service_dir" \
+        "node -e \"
+const { Client } = require('pg');
+const dbUrl = process.env.DATABASE_URL.replace(/\\\\/[^\\\\/]+\\\$/, '/postgres');
+const client = new Client({ connectionString: dbUrl });
+(async () => {
+  await client.connect();
+  await client.query(\\\"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'workflow-builder' AND pid <> pg_backend_pid()\\\");
+  await client.query('DROP DATABASE IF EXISTS \\\"workflow-builder\\\"');
+  await client.query('CREATE DATABASE \\\"workflow-builder\\\"');
+  await client.end();
+  console.log('Database recreated successfully');
+})();
+\"" \
+        "Recreating workflow-builder database" \
+        true; then
+
+        print_success "Database recreated"
+    else
+        print_warning "Database recreation failed, attempting migrations anyway"
+    fi
+
     if run_in_dir "workflow-api" "$service_dir" \
         "npm run db:run-migrations" \
-        "Running TypeORM migrations"; then
+        "Running TypeORM migrations" \
+        true; then
 
         if run_in_dir "workflow-api" "$service_dir" \
             "npm run seed" \
@@ -706,8 +732,11 @@ reset_workflow_api() {
 
             SUCCESSFUL_RESETS+=("workflow-api")
             print_success "workflow-api reset completed"
+            print_warning "Note: You may need to reset the workflow GitHub repo separately with: npm run reset:workflows $client"
         else
             print_warning "Migrations completed but seed failed"
+            print_info "This often means the GitHub workflow repo needs to be reset first."
+            print_info "Run: npm run reset:workflows $client"
             PARTIAL_RESETS+=("workflow-api")
         fi
     else
