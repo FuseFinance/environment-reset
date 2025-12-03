@@ -182,6 +182,7 @@ create_temp_env_file() {
     fi
 
     print_info "Creating temporary .env with Secrets Manager credentials"
+    # Create .env file without quotes - values will be properly handled when exported
     echo "$secret_json" | jq -r 'to_entries | .[] | "\(.key)=\(.value)"' > "$service_dir/.env"
     return 0
 }
@@ -197,6 +198,22 @@ restore_env_file() {
         print_info "Restoring original .env from backup"
         mv "$service_dir/.env.backup" "$service_dir/.env"
     fi
+}
+
+# Helper function to export environment variables from JSON secret
+export_env_from_secret() {
+    local secret_id=$1
+    local secret_json=$(get_secret "$secret_id")
+    local secret_status=$?
+    
+    if [ $secret_status -ne 0 ]; then
+        return $secret_status
+    fi
+    
+    # Export each key-value pair from JSON, properly escaping values
+    echo "$secret_json" | jq -r 'to_entries | .[] | "export \(.key)=\"\(.value | gsub("\""; "\\\""))\" "' | while IFS= read -r export_line; do
+        eval "$export_line"
+    done
 }
 
 # Helper function to setup service directory (git, npm, prisma)
@@ -394,7 +411,31 @@ run_in_dir() {
 
     # If use_dotenv is true and .env exists, run command in subshell with loaded env
     if [ "$use_dotenv" = "true" ] && [ -f ".env" ]; then
-        if (eval "$node_path_prefix"; set -a; source .env; set +a; eval "$command") > /tmp/${service_name}-output.log 2>&1; then
+        # Use printf %q to safely escape all special characters in values
+        # This is the most reliable method for handling special chars like $, !, ^, etc.
+        local env_exports=""
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            # Skip lines that don't contain =
+            [[ ! "$line" =~ = ]] && continue
+            
+            # Extract key and value (everything after first =)
+            local key="${line%%=*}"
+            local value="${line#*=}"
+            
+            # Remove leading/trailing whitespace from key
+            key=$(echo "$key" | xargs)
+            
+            # Use printf %q to properly escape the value for shell evaluation
+            # This handles ALL special characters safely
+            local escaped_value
+            printf -v escaped_value '%q' "$value"
+            
+            env_exports="${env_exports}export ${key}=${escaped_value};"
+        done < .env
+        
+        if (eval "$node_path_prefix"; eval "$env_exports"; eval "$command") > /tmp/${service_name}-output.log 2>&1; then
             print_success "$description completed"
             return 0
         else
