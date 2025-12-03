@@ -473,6 +473,15 @@ reset_los_core_api() {
 
     local success=true
 
+    # Reset database schema to ensure clean state
+    if run_in_dir "los-core-api-$env_type" "$service_dir" \
+        "npx prisma migrate reset --force --skip-seed" \
+        "Resetting database schema"; then
+        print_success "Database schema reset completed"
+    else
+        print_warning "Schema reset failed, attempting deployment anyway"
+    fi
+
     if run_in_dir "los-core-api-$env_type" "$service_dir" \
         "npx prisma migrate deploy" \
         "Deploying Prisma migrations"; then
@@ -527,6 +536,15 @@ reset_los_integrations() {
     fi
 
     local success=true
+
+    # Reset database schema to ensure clean state
+    if run_in_dir "los-integrations-$env_type" "$service_dir" \
+        "npx prisma migrate reset --force --skip-seed" \
+        "Resetting database schema"; then
+        print_success "Database schema reset completed"
+    else
+        print_warning "Schema reset failed, attempting deployment anyway"
+    fi
 
     if run_in_dir "los-integrations-$env_type" "$service_dir" \
         "npx prisma migrate deploy" \
